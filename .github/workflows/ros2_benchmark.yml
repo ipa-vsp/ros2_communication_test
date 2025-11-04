@@ -1,4 +1,4 @@
-name: ROS 2 Benchmark
+name: ROS 2 Benchmark Matrix
 
 on:
   push:
@@ -15,15 +15,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - ros_distro: jazzy
-            rmw: rmw_fastrtps_cpp
-            apt_package: ros-jazzy-rmw-fastrtps-cpp
-          - ros_distro: jazzy
-            rmw: rmw_cyclonedds_cpp
-            apt_package: ros-jazzy-rmw-cyclonedds-cpp
+        ros_distro: [jazzy, humble]
+        rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
+        reliability: [reliable, besteffort]
+        durability: [volatile, transient_local]
     env:
       ROS_DISTRO: ${{ matrix.ros_distro }}
+      RMW_IMPLEMENTATION: ${{ matrix.rmw }}
+      RELIABILITY: ${{ matrix.reliability }}
+      DURABILITY: ${{ matrix.durability }}
+      RESULT_FILE: ${{ format('results/{0}/{1}_{2}_{3}_{4}.csv', matrix.ros_distro, matrix.ros_distro, matrix.rmw, matrix.reliability, matrix.durability) }}
+      APT_PACKAGE: ${{ format('ros-{0}-{1}', matrix.ros_distro, replace(matrix.rmw, '_', '-')) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,31 +35,31 @@ jobs:
         run: |
           set -euxo pipefail
           apt-get update
-          apt-get install -y --no-install-recommends python3-pip ${{ matrix.apt_package }}
+          apt-get install -y --no-install-recommends python3-pip $APT_PACKAGE
           pip3 install --no-cache-dir pandas numpy
 
       - name: Run benchmark
-        env:
-          RMW_IMPLEMENTATION: ${{ matrix.rmw }}
         shell: bash
         run: |
           set -euxo pipefail
           source /opt/ros/$ROS_DISTRO/setup.bash
+          mkdir -p "$(dirname "$RESULT_FILE")"
           python3 scripts/ros2_benchmark.py \
-            --distro $ROS_DISTRO \
-            --rmw $RMW_IMPLEMENTATION \
-            --reliability reliable \
-            --durability volatile \
-            --output results/${RMW_IMPLEMENTATION}.csv
+            --distro "$ROS_DISTRO" \
+            --rmw "$RMW_IMPLEMENTATION" \
+            --reliability "$RELIABILITY" \
+            --durability "$DURABILITY" \
+            --output "$RESULT_FILE"
 
       - name: Inspect results
         shell: bash
         run: |
+          set -euxo pipefail
           ls -R results
-          head -n 5 results/${{ matrix.rmw }}.csv
+          head -n 5 "$RESULT_FILE"
 
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.rmw }}-benchmark
-          path: results/${{ matrix.rmw }}.csv
+          name: ${{ format('{0}-{1}-{2}-{3}-benchmark', matrix.ros_distro, matrix.rmw, matrix.reliability, matrix.durability) }}
+          path: ${{ env.RESULT_FILE }}
