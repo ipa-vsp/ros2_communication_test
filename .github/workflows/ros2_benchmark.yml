@@ -35,8 +35,7 @@ jobs:
           set -euxo pipefail
           apt_pkg="ros-${ROS_DISTRO}-${RMW_IMPLEMENTATION//_/-}"
           apt-get update
-          apt-get install -y --no-install-recommends python3-pip "$apt_pkg"
-          pip3 install --no-cache-dir pandas numpy
+          apt-get install -y --no-install-recommends python3-pip "$apt_pkg" python3-pandas python3-numpy
 
       - name: Run benchmark
         shell: bash
