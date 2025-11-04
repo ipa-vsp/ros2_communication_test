@@ -7,22 +7,23 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  ROS_DISTRO: jazzy
-
 jobs:
   benchmark:
     runs-on: ubuntu-latest
     container:
-      image: ros:${{ env.ROS_DISTRO }}-ros-base
+      image: ros:${{ matrix.ros_distro }}-ros-base
     strategy:
       fail-fast: false
       matrix:
         include:
-          - rmw: rmw_fastrtps_cpp
+          - ros_distro: jazzy
+            rmw: rmw_fastrtps_cpp
             apt_package: ros-jazzy-rmw-fastrtps-cpp
-          - rmw: rmw_cyclonedds_cpp
+          - ros_distro: jazzy
+            rmw: rmw_cyclonedds_cpp
             apt_package: ros-jazzy-rmw-cyclonedds-cpp
+    env:
+      ROS_DISTRO: ${{ matrix.ros_distro }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
