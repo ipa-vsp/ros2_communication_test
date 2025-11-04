@@ -1,60 +1,59 @@
-name: ROS2 Communication Benchmark CI
+name: ROS 2 Benchmark
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * 1"   # run every Monday 03:00 UTC
+
+env:
+  ROS_DISTRO: jazzy
 
 jobs:
-  ros2-benchmark:
-    name: Run ROS2 Communication Benchmarks
-    runs-on: ubuntu-22.04
+  benchmark:
+    runs-on: ubuntu-latest
+    container:
+      image: ros:${{ env.ROS_DISTRO }}-ros-base
     strategy:
       fail-fast: false
       matrix:
-        distro: [humble, iron, jazzy]
-        rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
-        qos_reliability: [reliable, besteffort]
-        qos_durability: [volatile, transient_local]
-
-    env:
-      RMW_IMPLEMENTATION: ${{ matrix.rmw }}
-      ROS_DISTRO: ${{ matrix.distro }}
-      QOS_RELIABILITY: ${{ matrix.qos_reliability }}
-      QOS_DURABILITY: ${{ matrix.qos_durability }}
-
+        include:
+          - rmw: rmw_fastrtps_cpp
+            apt_package: ros-jazzy-rmw-fastrtps-cpp
+          - rmw: rmw_cyclonedds_cpp
+            apt_package: ros-jazzy-rmw-cyclonedds-cpp
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up ROS 2 ${{ matrix.distro }}
-        uses: ros-tooling/setup-ros@v0.7
-        with:
-          required-ros-distributions: ${{ matrix.distro }}
 
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y python3-pip
-          pip install psutil numpy pandas matplotlib
+          set -euxo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip ${{ matrix.apt_package }}
+          pip3 install --no-cache-dir pandas numpy
 
-      - name: Build workspace
+      - name: Run benchmark
+        env:
+          RMW_IMPLEMENTATION: ${{ matrix.rmw }}
         run: |
-          source /opt/ros/${{ matrix.distro }}/setup.bash
-          colcon build --symlink-install
-
-      - name: Run Benchmark
-        run: |
-          source install/setup.bash
+          set -euxo pipefail
+          source /opt/ros/$ROS_DISTRO/setup.bash
           python3 scripts/ros2_benchmark.py \
-            --distro ${{ matrix.distro }} \
-            --rmw ${{ matrix.rmw }} \
-            --reliability ${{ matrix.qos_reliability }} \
-            --durability ${{ matrix.qos_durability }} \
-            --output results/${{ matrix.distro }}_${{ matrix.rmw }}_${{ matrix.qos_reliability }}_${{ matrix.qos_durability }}.csv
+            --distro $ROS_DISTRO \
+            --rmw $RMW_IMPLEMENTATION \
+            --reliability reliable \
+            --durability volatile \
+            --output results/${RMW_IMPLEMENTATION}.csv
+
+      - name: Inspect results
+        run: |
+          ls -R results
+          head -n 5 results/${{ matrix.rmw }}.csv
 
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
-          name: ros2_benchmark_results
-          path: results/
+          name: ${{ matrix.rmw }}-benchmark
+          path: results/${{ matrix.rmw }}.csv

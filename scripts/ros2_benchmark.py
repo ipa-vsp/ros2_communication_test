@@ -9,6 +9,7 @@ Description:
 
 import argparse
 import time
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import rclpy
@@ -26,6 +27,7 @@ class PingNode(Node):
         self.sent_time = None
         self.latencies = []
         self.iterations = 100
+        self.completed = False
 
     def callback(self, msg):
         self.received_time = time.time()
@@ -35,7 +37,7 @@ class PingNode(Node):
             self.send_ping()
         else:
             self.get_logger().info("Benchmark complete.")
-            rclpy.shutdown()
+            self.completed = True
 
     def send_ping(self):
         self.sent_time = time.time()
@@ -78,7 +80,8 @@ def run_benchmark(distro, rmw, reliability, durability, output_file):
     ping_node.send_ping()
 
     try:
-        executor.spin()
+        while rclpy.ok() and not ping_node.completed:
+            executor.spin_once(timeout_sec=0.1)
     except KeyboardInterrupt:
         pass
     finally:
@@ -99,7 +102,10 @@ def run_benchmark(distro, rmw, reliability, durability, output_file):
         df["distro"] = distro
         df["reliability"] = reliability
         df["durability"] = durability
-        df.to_csv(output_file, index=False)
+        output_path = Path(output_file)
+        if output_path.parent:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(output_path, index=False)
         print(f"[✅] Saved results to {output_file}")
 
 
