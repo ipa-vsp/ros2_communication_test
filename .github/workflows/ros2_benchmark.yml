@@ -1,0 +1,60 @@
+name: ROS2 Communication Benchmark CI
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"   # run every Monday 03:00 UTC
+
+jobs:
+  ros2-benchmark:
+    name: Run ROS2 Communication Benchmarks
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, iron, jazzy]
+        rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
+        qos_reliability: [reliable, besteffort]
+        qos_durability: [volatile, transient_local]
+
+    env:
+      RMW_IMPLEMENTATION: ${{ matrix.rmw }}
+      ROS_DISTRO: ${{ matrix.distro }}
+      QOS_RELIABILITY: ${{ matrix.qos_reliability }}
+      QOS_DURABILITY: ${{ matrix.qos_durability }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up ROS 2 ${{ matrix.distro }}
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: ${{ matrix.distro }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip
+          pip install psutil numpy pandas matplotlib
+
+      - name: Build workspace
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          colcon build --symlink-install
+
+      - name: Run Benchmark
+        run: |
+          source install/setup.bash
+          python3 scripts/ros2_benchmark.py \
+            --distro ${{ matrix.distro }} \
+            --rmw ${{ matrix.rmw }} \
+            --reliability ${{ matrix.qos_reliability }} \
+            --durability ${{ matrix.qos_durability }} \
+            --output results/${{ matrix.distro }}_${{ matrix.rmw }}_${{ matrix.qos_reliability }}_${{ matrix.qos_durability }}.csv
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ros2_benchmark_results
+          path: results/
