@@ -41,6 +41,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          export AMENT_TRACE_SETUP_FILES=0
           source /opt/ros/$ROS_DISTRO/setup.bash
           mkdir -p "$(dirname "$RESULT_FILE")"
           python3 scripts/ros2_benchmark.py \
