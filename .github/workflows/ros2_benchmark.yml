@@ -25,7 +25,6 @@ jobs:
       RELIABILITY: ${{ matrix.reliability }}
       DURABILITY: ${{ matrix.durability }}
       RESULT_FILE: ${{ format('results/{0}/{1}_{2}_{3}_{4}.csv', matrix.ros_distro, matrix.ros_distro, matrix.rmw, matrix.reliability, matrix.durability) }}
-      APT_PACKAGE: ${{ format('ros-{0}-{1}', matrix.ros_distro, replace(matrix.rmw, '_', '-')) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,8 +33,9 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          apt_pkg="ros-${ROS_DISTRO}-${RMW_IMPLEMENTATION//_/-}"
           apt-get update
-          apt-get install -y --no-install-recommends python3-pip $APT_PACKAGE
+          apt-get install -y --no-install-recommends python3-pip "$apt_pkg"
           pip3 install --no-cache-dir pandas numpy
 
       - name: Run benchmark
