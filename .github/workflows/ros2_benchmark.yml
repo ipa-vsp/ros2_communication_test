@@ -42,6 +42,7 @@ jobs:
         run: |
           set -euxo pipefail
           export AMENT_TRACE_SETUP_FILES=0
+          export AMENT_PYTHON_EXECUTABLE="$(command -v python3)"
           source /opt/ros/$ROS_DISTRO/setup.bash
           mkdir -p "$(dirname "$RESULT_FILE")"
           python3 scripts/ros2_benchmark.py \
