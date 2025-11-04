@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           apt_pkg="ros-${ROS_DISTRO}-${RMW_IMPLEMENTATION//_/-}"
           apt-get update
           apt-get install -y --no-install-recommends python3-pip "$apt_pkg" python3-pandas python3-numpy
@@ -40,7 +40,7 @@ jobs:
       - name: Run benchmark
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           export AMENT_TRACE_SETUP_FILES=0
           export AMENT_PYTHON_EXECUTABLE="$(command -v python3)"
           source /opt/ros/$ROS_DISTRO/setup.bash
@@ -55,7 +55,7 @@ jobs:
       - name: Inspect results
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           ls -R results
           head -n 5 "$RESULT_FILE"
 
