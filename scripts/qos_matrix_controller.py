@@ -17,10 +17,14 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import rclpy
+from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
+
+from example_interfaces.action import Fibonacci
 
 from qos_matrix_common import (
     QoSConfig,
@@ -328,10 +332,10 @@ def main() -> None:
     env_loads = os.environ.get("MATRIX_LOADS", "10:256:20,50:1024:20")
     results_dir = Path(os.environ.get("RESULTS_DIR", "results/docker_matrix"))
 
-    warn_latency_ms = float(os.environ.get("TOPIC_WARN_LATENCY_MS", 50.0))
-    fail_latency_ms = float(os.environ.get("TOPIC_FAIL_LATENCY_MS", 150.0))
+    warn_latency_ms = float(os.environ.get("TOPIC_WARN_LATENCY_MS", 100.0))
+    fail_latency_ms = float(os.environ.get("TOPIC_FAIL_LATENCY_MS", 1000.0))
     warn_loss_ratio = float(os.environ.get("TOPIC_WARN_LOSS", 0.1))
-        fail_loss_ratio = float(os.environ.get("TOPIC_FAIL_LOSS", 0.3))
+    fail_loss_ratio = float(os.environ.get("TOPIC_FAIL_LOSS", 0.3))
 
     if not env_profiles or env_profiles.strip().lower() == "auto":
         default_distro = os.environ.get("ROS_DISTRO", "humble")

@@ -62,6 +62,56 @@ if ((${#APT_PACKAGES[@]})); then
   flock "$APT_LOCK" bash -c "$install_cmd"
 fi
 
+backfill_interface_base_classes() {
+  local vendor_file="/workspace/scripts/vendor/rosidl_pycommon/interface_base_classes.py"
+  if [[ ! -f "$vendor_file" ]]; then
+    return
+  fi
+  local target_dir
+  target_dir=$(python3 - <<'PY'
+import pathlib
+import rosidl_pycommon
+print(pathlib.Path(rosidl_pycommon.__file__).parent)
+PY
+)
+  if [[ -z "$target_dir" ]]; then
+    return
+  fi
+  if [[ -f "$target_dir/interface_base_classes.py" ]]; then
+    return
+  fi
+  echo "[INFO] Installing rosidl_pycommon.interface_base_classes shim."
+  cp "$vendor_file" "$target_dir/"
+}
+
+backfill_interface_base_classes
+
+ZENOH_ROUTER_PID=""
+start_zenoh_router_if_needed() {
+  if [[ "${ROLE}" != "controller" ]]; then
+    return
+  fi
+  if [[ "${RMW_IMPLEMENTATION:-}" != "rmw_zenoh_cpp" ]]; then
+    return
+  fi
+  if pgrep -f "[r]mw_zenohd" >/dev/null 2>&1; then
+    echo "[INFO] Zenoh router already running; skipping launch."
+    return
+  fi
+  echo "[INFO] Starting Zenoh router via 'ros2 run rmw_zenoh_cpp rmw_zenohd'."
+  ros2 run rmw_zenoh_cpp rmw_zenohd >/tmp/zenoh_router.log 2>&1 &
+  ZENOH_ROUTER_PID=$!
+  trap 'if [[ -n "${ZENOH_ROUTER_PID:-}" ]] && kill -0 "${ZENOH_ROUTER_PID}" 2>/dev/null; then kill "${ZENOH_ROUTER_PID}"; fi' EXIT
+  local wait_seconds=${ZENOH_ROUTER_STARTUP_DELAY:-2}
+  sleep "$wait_seconds"
+  if ! kill -0 "${ZENOH_ROUTER_PID}" 2>/dev/null; then
+    echo "[ERROR] Zenoh router failed to start; see /tmp/zenoh_router.log" >&2
+    exit 1
+  fi
+}
+
+start_zenoh_router_if_needed
+
 case "$ROLE" in
   controller)
     exec python3 scripts/qos_matrix_controller.py

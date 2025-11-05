@@ -10,6 +10,7 @@ import json
 from typing import Optional
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from std_msgs.msg import String
 
@@ -74,11 +75,12 @@ def main() -> None:
     responder = MatrixResponder()
     try:
         rclpy.spin(responder)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         responder.get_logger().info("Responder shutting down.")
     finally:
         responder.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
