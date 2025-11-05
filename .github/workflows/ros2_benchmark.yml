@@ -15,8 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ros_distro: [jazzy, humble]
-        rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp]
+        ros_distro: [rolling, kilted, jazzy, iron, humble]
+        rmw: [rmw_fastrtps_cpp, rmw_cyclonedds_cpp, rmw_zenoh_cpp]
         reliability: [reliable, besteffort]
         durability: [volatile, transient_local]
     env:

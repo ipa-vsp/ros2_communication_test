@@ -3,8 +3,8 @@ set -euo pipefail
 
 # Runs ROS 2 latency benchmarks across a matrix of distributions and RMW implementations.
 
-DISTROS=${ROS_DISTROS:-"jazzy humble"}
-RMWS=${RMW_IMPLEMENTATIONS:-"rmw_fastrtps_cpp rmw_cyclonedds_cpp"}
+DISTROS=${ROS_DISTROS:-"rolling kilted jazzy iron humble"}
+RMWS=${RMW_IMPLEMENTATIONS:-"rmw_fastrtps_cpp rmw_cyclonedds_cpp rmw_zenoh_cpp"}
 OUTPUT_ROOT=${RMW_RESULTS_DIR:-"results/rmw_matrix"}
 
 mkdir -p "$OUTPUT_ROOT"

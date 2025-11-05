@@ -1,0 +1,5 @@
+profile,humble-rmw_fastrtps_cpp-reliable-volatile,humble-rmw_fastrtps_cpp-reliable-transient_local,humble-rmw_fastrtps_cpp-besteffort-volatile,humble-rmw_fastrtps_cpp-besteffort-transient_local
+humble-rmw_fastrtps_cpp-reliable-volatile,pass,failed,failed,failed
+humble-rmw_fastrtps_cpp-reliable-transient_local,failed,pass,failed,failed
+humble-rmw_fastrtps_cpp-besteffort-volatile,failed,failed,pass,failed
+humble-rmw_fastrtps_cpp-besteffort-transient_local,failed,failed,failed,pass

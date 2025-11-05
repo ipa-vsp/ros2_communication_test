@@ -3,8 +3,8 @@ set -euo pipefail
 
 # Runs ROS 2 latency benchmarks across a matrix of QoS settings for each RMW implementation.
 
-DISTROS=${ROS_DISTROS:-"jazzy"}
-RMWS=${RMW_IMPLEMENTATIONS:-"rmw_fastrtps_cpp rmw_cyclonedds_cpp"}
+DISTROS=${ROS_DISTROS:-"rolling kilted jazzy iron humble"}
+RMWS=${RMW_IMPLEMENTATIONS:-"rmw_fastrtps_cpp rmw_cyclonedds_cpp rmw_zenoh_cpp"}
 RELIABILITIES=${ROS_RELIABILITIES:-"reliable besteffort"}
 DURABILITIES=${ROS_DURABILITIES:-"volatile transient_local"}
 OUTPUT_ROOT=${QOS_RESULTS_DIR:-"results/qos_matrix"}
