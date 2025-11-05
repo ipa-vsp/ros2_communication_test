@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Controller container entry point for the ROS 2 QoS matrix benchmark.
-Publishes traffic against the responder, exercises a service/action, and records a compatibility matrix.
+Publishes traffic against the responder and records a compatibility matrix.
 """
 
 from __future__ import annotations
@@ -17,13 +17,10 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import rclpy
-from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from std_msgs.msg import String
-from std_srvs.srv import Trigger
-from example_interfaces.action import Fibonacci
 
 from qos_matrix_common import (
     QoSConfig,
@@ -56,8 +53,6 @@ class MatrixController(Node):
         fail_latency_ms: float,
         warn_loss_ratio: float,
         fail_loss_ratio: float,
-        service_timeout: float,
-        action_timeout: float,
     ) -> None:
         super().__init__("matrix_controller")
         self._profiles = profiles
@@ -67,8 +62,6 @@ class MatrixController(Node):
         self._fail_latency_ms = fail_latency_ms
         self._warn_loss_ratio = warn_loss_ratio
         self._fail_loss_ratio = fail_loss_ratio
-        self._service_timeout = service_timeout
-        self._action_timeout = action_timeout
 
         self._config_pub = self.create_publisher(String, "matrix/config", 10)
         self._ping_pub = None
@@ -121,14 +114,6 @@ class MatrixController(Node):
         self._received_token = True
 
     def run_matrix(self, executor: MultiThreadedExecutor) -> Dict[str, Dict[str, Dict[str, object]]]:
-        self.get_logger().info("Waiting for responder services...")
-        service_ready = self._trigger_client.wait_for_service(timeout_sec=10.0)
-        if not service_ready:
-            raise RuntimeError("Responder Trigger service not available.")
-
-        if not self._action_client.wait_for_server(timeout_sec=10.0):
-            raise RuntimeError("Responder Fibonacci action not available.")
-
         matrix: Dict[str, Dict[str, Dict[str, object]]] = {profile.name: {} for profile in self._profiles}
         for controller_profile in self._profiles:
             self.get_logger().info(f"Testing controller profile '{controller_profile.name}'")
@@ -158,23 +143,12 @@ class MatrixController(Node):
             topic_statuses.append(status)
         topic_status = worst_status(topic_statuses)
 
-        service_status, service_detail = self._run_service_test(executor)
-        action_status, action_detail = self._run_action_test(executor)
-
-        overall = worst_status([topic_status, service_status, action_status])
+        overall = topic_status
         return {
             "status": overall,
             "topic": {
                 "status": topic_status,
                 "details": topic_details,
-            },
-            "service": {
-                "status": service_status,
-                "detail": service_detail,
-            },
-            "action": {
-                "status": action_status,
-                "detail": action_detail,
             },
         }
 
@@ -357,19 +331,23 @@ def main() -> None:
     warn_latency_ms = float(os.environ.get("TOPIC_WARN_LATENCY_MS", 50.0))
     fail_latency_ms = float(os.environ.get("TOPIC_FAIL_LATENCY_MS", 150.0))
     warn_loss_ratio = float(os.environ.get("TOPIC_WARN_LOSS", 0.1))
-    fail_loss_ratio = float(os.environ.get("TOPIC_FAIL_LOSS", 0.3))
-    service_timeout = float(os.environ.get("SERVICE_TIMEOUT", 8.0))
-    action_timeout = float(os.environ.get("ACTION_TIMEOUT", 15.0))
+        fail_loss_ratio = float(os.environ.get("TOPIC_FAIL_LOSS", 0.3))
 
     if not env_profiles or env_profiles.strip().lower() == "auto":
         default_distro = os.environ.get("ROS_DISTRO", "humble")
         default_rmw = os.environ.get("RMW_IMPLEMENTATION", "rmw_fastrtps_cpp")
         distros = split_items(os.environ.get("MATRIX_DISTROS", default_distro))
         rmws = split_items(os.environ.get("MATRIX_RMWS", default_rmw))
-        reliabilities = split_items(os.environ.get("MATRIX_RELIABILITIES", "reliable besteffort"))
-        durabilities = split_items(os.environ.get("MATRIX_DURABILITIES", "volatile transient_local"))
+        matrix_reliability = os.environ.get("MATRIX_RELIABILITY", os.environ.get("RELIABILITY", "reliable"))
+        matrix_durability = os.environ.get("MATRIX_DURABILITY", os.environ.get("DURABILITY", "volatile"))
         matrix_depth = int(os.environ.get("MATRIX_DEPTH", "10"))
-        profiles = generate_profiles(distros, rmws, reliabilities, durabilities, depth=matrix_depth)
+        profiles = generate_profiles(
+            distros,
+            rmws,
+            matrix_reliability,
+            matrix_durability,
+            depth=matrix_depth,
+        )
         if not profiles:
             raise RuntimeError("No profiles generated. Check MATRIX_* environment variables.")
     else:
@@ -385,8 +363,6 @@ def main() -> None:
         fail_latency_ms=fail_latency_ms,
         warn_loss_ratio=warn_loss_ratio,
         fail_loss_ratio=fail_loss_ratio,
-        service_timeout=service_timeout,
-        action_timeout=action_timeout,
     )
     executor = MultiThreadedExecutor()
     executor.add_node(controller)

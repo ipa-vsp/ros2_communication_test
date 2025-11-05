@@ -1,23 +1,20 @@
-version: "3.9"
-
 networks:
   ros2_matrix:
-    external:
-      name: ${ROS2_MATRIX_NETWORK:-ros2_matrix}
+    external: true
+    name: ${ROS2_MATRIX_NETWORK:-ros2_matrix}
 
 services:
   controller:
-    image: "${ROS_MATRIX_IMAGE:-ros:humble-ros-base}"
-    container_name: ros2_matrix_controller
+    image: "${ROS_MATRIX_CONTROLLER_IMAGE:-ros:humble-ros-base}"
     environment:
-      - ROS_DISTRO=${ROS_DISTRO:-humble}
+      - ROS_DISTRO=${CONTROLLER_ROS_DISTRO:-humble}
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
-      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      - RMW_IMPLEMENTATION=${CONTROLLER_RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
       - MATRIX_PROFILES=${MATRIX_PROFILES:-auto}
       - MATRIX_DISTROS=${MATRIX_DISTROS:-humble}
       - MATRIX_RMWS=${MATRIX_RMWS:-rmw_fastrtps_cpp}
-      - MATRIX_RELIABILITIES=${MATRIX_RELIABILITIES:-reliable besteffort}
-      - MATRIX_DURABILITIES=${MATRIX_DURABILITIES:-volatile transient_local}
+      - MATRIX_RELIABILITY=${MATRIX_RELIABILITY:-reliable}
+      - MATRIX_DURABILITY=${MATRIX_DURABILITY:-volatile}
       - MATRIX_DEPTH=${MATRIX_DEPTH:-10}
       - MATRIX_LOADS=${MATRIX_LOADS:-10:256:20,50:1024:20}
       - RESULTS_DIR=${RESULTS_DIR:-results/docker_matrix}
@@ -30,17 +27,16 @@ services:
       - ros2_matrix
 
   responder:
-    image: "${ROS_MATRIX_IMAGE:-ros:humble-ros-base}"
-    container_name: ros2_matrix_responder
+    image: "${ROS_MATRIX_RESPONDER_IMAGE:-ros:humble-ros-base}"
     environment:
-      - ROS_DISTRO=${ROS_DISTRO:-humble}
+      - ROS_DISTRO=${RESPONDER_ROS_DISTRO:-humble}
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}
-      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      - RMW_IMPLEMENTATION=${RESPONDER_RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
       - MATRIX_PROFILES=${MATRIX_PROFILES:-auto}
       - MATRIX_DISTROS=${MATRIX_DISTROS:-humble}
       - MATRIX_RMWS=${MATRIX_RMWS:-rmw_fastrtps_cpp}
-      - MATRIX_RELIABILITIES=${MATRIX_RELIABILITIES:-reliable besteffort}
-      - MATRIX_DURABILITIES=${MATRIX_DURABILITIES:-volatile transient_local}
+      - MATRIX_RELIABILITY=${MATRIX_RELIABILITY:-reliable}
+      - MATRIX_DURABILITY=${MATRIX_DURABILITY:-volatile}
       - MATRIX_DEPTH=${MATRIX_DEPTH:-10}
       - ROLE=responder
     command: /workspace/scripts/qos_matrix_entrypoint.sh responder

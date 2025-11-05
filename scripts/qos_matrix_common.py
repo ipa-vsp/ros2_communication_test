@@ -154,10 +154,12 @@ def split_items(raw: str) -> List[str]:
 def generate_profiles(
     distros: Iterable[str],
     rmws: Iterable[str],
-    reliabilities: Iterable[str],
-    durabilities: Iterable[str],
+    reliability: str,
+    durability: str,
     depth: int = 10,
 ) -> List[QoSConfig]:
+    rel = canonical_reliability(reliability)
+    dur = canonical_durability(durability)
     profiles: List[QoSConfig] = []
     for distro in distros:
         distro_clean = distro.strip()
@@ -167,16 +169,14 @@ def generate_profiles(
             rmw_clean = rmw.strip()
             if not rmw_clean:
                 continue
-            for reliability in reliabilities:
-                rel = canonical_reliability(reliability)
-                for durability in durabilities:
-                    dur = canonical_durability(durability)
-                    name = f"{distro_clean}-{rmw_clean}-{rel}-{dur}"
-                    metadata = {
-                        "ros_distro": distro_clean,
-                        "rmw": rmw_clean,
-                    }
-                    profiles.append(
-                        QoSConfig(name=name, reliability=rel, durability=dur, depth=depth, metadata=metadata)
-                    )
+            name = f"{distro_clean}-{rmw_clean}"
+            metadata = {
+                "ros_distro": distro_clean,
+                "rmw": rmw_clean,
+                "reliability": rel,
+                "durability": dur,
+            }
+            profiles.append(
+                QoSConfig(name=name, reliability=rel, durability=dur, depth=depth, metadata=metadata)
+            )
     return profiles
