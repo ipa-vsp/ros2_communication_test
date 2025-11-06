@@ -7,12 +7,12 @@ set -euo pipefail
 
 NETWORK_NAME=${NETWORK_NAME:-ros2_matrix}
 COMPOSE_FILE=${COMPOSE_FILE:-docker/docker-compose.matrix.yml}
-DISTROS_DEFAULT="rolling kilted jazzy iron humble"
+DISTROS_DEFAULT="jazzy" # kilted jazzy iron humble"
 DISTROS=${MATRIX_DISTROS:-$DISTROS_DEFAULT}
 CONTROLLER_DISTROS=${CONTROLLER_DISTROS:-$DISTROS}
 RESPONDER_DISTROS=${RESPONDER_DISTROS:-$DISTROS}
-CONTROLLER_RMWS=${CONTROLLER_RMWS:-${MATRIX_RMWS:-"rmw_fastrtps_cpp rmw_cyclonedds_cpp rmw_zenoh_cpp"}}
-RESPONDER_RMWS=${RESPONDER_RMWS:-${MATRIX_RMWS:-"rmw_fastrtps_cpp rmw_cyclonedds_cpp rmw_zenoh_cpp"}}
+CONTROLLER_RMWS=${CONTROLLER_RMWS:-${MATRIX_RMWS:-"rmw_zenoh_cpp"}}
+RESPONDER_RMWS=${RESPONDER_RMWS:-${MATRIX_RMWS:-"rmw_zenoh_cpp"}}
 MATRIX_RELIABILITY=${MATRIX_RELIABILITY:-reliable}
 MATRIX_DURABILITY=${MATRIX_DURABILITY:-volatile}
 MATRIX_DEPTH=${MATRIX_DEPTH:-10}
@@ -211,6 +211,8 @@ for ctrl_idx in "${!CTRL_DISTRO_LABELS[@]}"; do
           ROS2_MATRIX_NETWORK="$NETWORK_NAME" \
           ROS_MATRIX_CONTROLLER_IMAGE="$controller_image" \
           ROS_MATRIX_RESPONDER_IMAGE="$responder_image" \
+          ZENOH_ROUTER_IMAGE="ros:${ctrl_label}-ros-base" \
+          ZENOH_ROUTER_ROS_DISTRO="$ctrl_label" \
           CONTROLLER_ROS_DISTRO="$ctrl_label" \
           RESPONDER_ROS_DISTRO="$resp_label" \
           CONTROLLER_RMW_IMPLEMENTATION="$ctrl_rmw" \

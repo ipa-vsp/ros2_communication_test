@@ -4,6 +4,14 @@ networks:
     name: ${ROS2_MATRIX_NETWORK:-ros2_matrix}
 
 services:
+  zenoh-router:
+    image: "${ZENOH_ROUTER_IMAGE:-ros:rolling-ros-base}"
+    environment:
+      - ROS_DISTRO=${ZENOH_ROUTER_ROS_DISTRO:-rolling}
+    command: bash -lc "source /opt/ros/${ZENOH_ROUTER_ROS_DISTRO:-rolling}/setup.bash && ros2 run rmw_zenoh_cpp rmw_zenohd --listen tcp/0.0.0.0:7447"
+    networks:
+      - ros2_matrix
+
   controller:
     image: "${ROS_MATRIX_CONTROLLER_IMAGE:-ros:humble-ros-base}"
     environment:
@@ -19,12 +27,16 @@ services:
       - MATRIX_LOADS=${MATRIX_LOADS:-10:256:20,50:1024:20}
       - RESULTS_DIR=${RESULTS_DIR:-results/docker_matrix}
       - ROLE=controller
+      - ZENOH_CONFIG_OVERRIDE=${ZENOH_CONFIG_OVERRIDE:-mode="client";connect/endpoints=["tcp/zenoh-router:7447"]}
+      - ZENOH_ROUTER_CHECK_ATTEMPTS=${ZENOH_ROUTER_CHECK_ATTEMPTS:-10}
     command: /workspace/scripts/qos_matrix_entrypoint.sh controller
     working_dir: /workspace
     volumes:
       - ..:/workspace:rw
     networks:
       - ros2_matrix
+    depends_on:
+      - zenoh-router
 
   responder:
     image: "${ROS_MATRIX_RESPONDER_IMAGE:-ros:humble-ros-base}"
@@ -39,9 +51,13 @@ services:
       - MATRIX_DURABILITY=${MATRIX_DURABILITY:-volatile}
       - MATRIX_DEPTH=${MATRIX_DEPTH:-10}
       - ROLE=responder
+      - ZENOH_CONFIG_OVERRIDE=${ZENOH_CONFIG_OVERRIDE:-mode="client";connect/endpoints=["tcp/zenoh-router:7447"]}
+      - ZENOH_ROUTER_CHECK_ATTEMPTS=${ZENOH_ROUTER_CHECK_ATTEMPTS:-10}
     command: /workspace/scripts/qos_matrix_entrypoint.sh responder
     working_dir: /workspace
     volumes:
       - ..:/workspace:rw
     networks:
       - ros2_matrix
+    depends_on:
+      - zenoh-router

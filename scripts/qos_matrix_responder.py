@@ -77,6 +77,11 @@ def main() -> None:
         rclpy.spin(responder)
     except (KeyboardInterrupt, ExternalShutdownException):
         responder.get_logger().info("Responder shutting down.")
+    except Exception as exc:  # noqa: BLE001
+        if "context is not valid" in str(exc).lower():
+            responder.get_logger().info("Responder shutting down.")
+        else:
+            raise
     finally:
         responder.destroy_node()
         if rclpy.ok():

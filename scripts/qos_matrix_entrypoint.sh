@@ -43,7 +43,18 @@ if ! python3 -c "import example_interfaces" >/dev/null 2>&1; then
   maybe_add_pkg "ros-${ROS_DISTRO}-example-interfaces"
 fi
 
-maybe_add_pkg "ros-${ROS_DISTRO}-rosidl-pycommon"
+if ! python3 -c "import rosidl_pycommon" >/dev/null 2>&1; then
+  case "${ROS_DISTRO}" in
+    humble|iron|jazzy)
+      maybe_add_pkg "ros-${ROS_DISTRO}-rosidl-runtime-py"
+      ;;
+    *)
+      maybe_add_pkg "ros-${ROS_DISTRO}-rosidl-pycommon"
+      ;;
+  esac
+else
+  maybe_add_pkg "ros-${ROS_DISTRO}-rosidl-pycommon"
+fi
 
 for impl in ${RMW_IMPLEMENTATION:-} ${MATRIX_RMWS:-}; do
   impl="${impl//[$'\n\r\t']}"
@@ -67,15 +78,21 @@ backfill_interface_base_classes() {
   if [[ ! -f "$vendor_file" ]]; then
     return
   fi
-  local target_dir
-  target_dir=$(python3 - <<'PY'
+  local target_dir=""
+  target_dir=$(python3 - <<'PY' 2>/dev/null || true
 import pathlib
 import rosidl_pycommon
 print(pathlib.Path(rosidl_pycommon.__file__).parent)
 PY
 )
   if [[ -z "$target_dir" ]]; then
-    return
+    target_dir="/opt/ros/${ROS_DISTRO}/lib/python3/dist-packages/rosidl_pycommon"
+    mkdir -p "$target_dir"
+    if [[ ! -f "$target_dir/__init__.py" ]]; then
+      cat >"$target_dir/__init__.py" <<'PY'
+from .interface_base_classes import *  # noqa
+PY
+    fi
   fi
   if [[ -f "$target_dir/interface_base_classes.py" ]]; then
     return
@@ -89,6 +106,14 @@ backfill_interface_base_classes
 ZENOH_ROUTER_PID=""
 start_zenoh_router_if_needed() {
   if [[ "${ROLE}" != "controller" ]]; then
+    return
+  fi
+  if [[ -n "${ZENOH_ROUTER_URI:-}" ]]; then
+    echo "[INFO] ZENOH_ROUTER_URI provided (${ZENOH_ROUTER_URI}); assuming external zenoh router."
+    return
+  fi
+  if [[ -n "${ZENOH_CONFIG_OVERRIDE:-}" ]]; then
+    echo "[INFO] ZENOH_CONFIG_OVERRIDE provided; assuming external zenoh router."
     return
   fi
   if [[ "${RMW_IMPLEMENTATION:-}" != "rmw_zenoh_cpp" ]]; then
